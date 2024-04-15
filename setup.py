@@ -10,5 +10,7 @@ setup(
         'accelerate',
         'transformers',
         'torch',
+        'protobuf',
+        'sentencepiece'
     ],
 )
