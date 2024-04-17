@@ -76,10 +76,9 @@ def main():
     args = parser.parse_args()
 
     # model_name = modeltype2path[args.model]
-    model_name = "meta-llama/Llama-2-7b-chat-hf"
 
-    WEIGHTS_PATH = model_name
-    TOKENIZER_PATH = WEIGHTS_PATH
+    # WEIGHTS_PATH = model_name
+    # TOKENIZER_PATH = WEIGHTS_PATH
 
     fname = args.model
     if args.use_system_prompt:
@@ -91,25 +90,9 @@ def main():
     if not os.path.exists(f"outputs/{fname}"):
         os.makedirs(f"outputs/{fname}")
 
-    # if "falcon" in args.model or "mpt" in args.model:
-    # model = AutoModelForCausalLM.from_pretrained(
-    #     WEIGHTS_PATH,
-    #     torch_dtype=torch.bfloat16,
-    #     trust_remote_code=True,
-    #     low_cpu_mem_usage=True,
-    #     device_map="auto",
-    # )
-
-    # else:
-    # model = AutoModelForCausalLM.from_pretrained(
-    #     WEIGHTS_PATH,
-    #     torch_dtype=torch.float16,
-    #     low_cpu_mem_usage=True,
-    #     device_map="auto",
-    # )
     model = AutoModelForCausalLM.from_pretrained("FlagAlpha/Llama2-Chinese-7b-Chat")
+    model = model.to("cuda")
 
-    # tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_PATH)
     tokenizer = AutoTokenizer.from_pretrained("FlagAlpha/Llama2-Chinese-7b-Chat")
 
     logging.info(f"Model size: {model.get_memory_footprint()/1e9}")
@@ -124,44 +107,6 @@ def main():
 
     # prepend sys prompt
     lines = [prepend_sys_prompt(l, args) for l in lines]
-
-    # if args.use_greedy:
-    #     logging.info(f"Running greedy")
-    #     prompts = []
-    #     outputs = []
-    #     model.eval()
-
-    #     for sentence in tqdm(lines):
-    #         try:
-    #             if "falcon" in args.model or "mpt" in args.model:
-    #                 ground_truth_generation = model.generate(
-    #                     tokenizer(sentence, return_tensors="pt").input_ids.to("cuda"),
-    #                     max_new_tokens=100,
-    #                     do_sample=False,
-    #                     num_return_sequences=1,
-    #                 )
-    #             else:
-    #                 # get ground truth generation
-    #                 ground_truth_embeds = get_sentence_embedding(
-    #                     model, tokenizer, sentence
-    #                 )
-    #                 ground_truth_generation = model.generate(
-    #                     inputs_embeds=ground_truth_embeds,
-    #                     max_new_tokens=100,
-    #                     do_sample=False,
-    #                     num_return_sequences=1,
-    #                 )
-    #             ground_truth_generation = tokenizer.batch_decode(
-    #                 ground_truth_generation
-    #             )
-    #             outputs.extend(ground_truth_generation)
-    #             prompts.extend([sentence] * args.n_sample)
-    #         except:
-    #             continue
-    #         results = pd.DataFrame()
-    #         results["prompt"] = [line.strip() for line in prompts]
-    #         results["output"] = outputs
-    #         results.to_csv(f"outputs/{fname}/output_greedy.csv")
 
     if args.use_greedy:
         logging.info("Running greedy")
@@ -194,48 +139,6 @@ def main():
             results["output"] = outputs
             results.to_csv(f"outputs/{fname}/output_greedy.csv")
 
-    # if args.use_default:
-    #     logging.info(f"Running default, top_p=0.9, temp=0.1")
-    #     prompts = []
-    #     outputs = []
-    #     model.eval()
-
-    #     for sentence in tqdm(lines):
-    #         try:
-    #             if "falcon" in args.model or "mpt" in args.model:
-    #                 ground_truth_generation = model.generate(
-    #                     tokenizer(sentence, return_tensors="pt").input_ids.to("cuda"),
-    #                     max_new_tokens=100,
-    #                     do_sample=True,
-    #                     top_p=0.9,
-    #                     temperature=0.1,
-    #                     num_return_sequences=1,
-    #                 )
-    #             else:
-    #                 # get ground truth generation
-    #                 ground_truth_embeds = get_sentence_embedding(
-    #                     model, tokenizer, sentence
-    #                 )
-    #                 ground_truth_generation = model.generate(
-    #                     inputs_embeds=ground_truth_embeds,
-    #                     max_new_tokens=100,
-    #                     do_sample=True,
-    #                     top_p=0.9,
-    #                     temperature=0.1,
-    #                     num_return_sequences=1,
-    #                 )
-    #             ground_truth_generation = tokenizer.batch_decode(
-    #                 ground_truth_generation
-    #             )
-    #             outputs.extend(ground_truth_generation)
-    #             prompts.extend([sentence] * args.n_sample)
-    #         except:
-    #             continue
-    #         results = pd.DataFrame()
-    #         results["prompt"] = [line.strip() for line in prompts]
-    #         results["output"] = outputs
-    #         results.to_csv(f"outputs/{fname}/output_default.csv")
-    # 确定是否启用默认的文本生成配置
     if args.use_default:
         logging.info("Running default, top_p=0.9, temp=0.1")
         prompts = []
@@ -269,51 +172,6 @@ def main():
             results["output"] = outputs
             results.to_csv(f"outputs/{fname}/output_default.csv")
 
-    # if args.tune_temp:
-    #     for temp in np.arange(0.05, 1.05, 0.05):
-    #         temp = np.round(temp, 2)
-    #         logging.info(f"Running temp = {temp}")
-    #         prompts = []
-    #         outputs = []
-    #         model.eval()
-
-    #         for sentence in tqdm(lines):
-    #             try:
-    #                 if "falcon" in args.model or "mpt" in args.model:
-    #                     ground_truth_generation = model.generate(
-    #                         tokenizer(sentence, return_tensors="pt").input_ids.to(
-    #                             "cuda"
-    #                         ),
-    #                         max_new_tokens=100,
-    #                         temperature=temp,
-    #                         do_sample=True,
-    #                         num_return_sequences=args.n_sample,
-    #                     )
-    #                 else:
-    #                     # get ground truth generation
-    #                     ground_truth_embeds = get_sentence_embedding(
-    #                         model, tokenizer, sentence
-    #                     )
-    #                     ground_truth_generation = model.generate(
-    #                         inputs_embeds=ground_truth_embeds,
-    #                         max_new_tokens=100,
-    #                         temperature=temp,
-    #                         do_sample=True,
-    #                         num_return_sequences=args.n_sample,
-    #                     )
-    #                 ground_truth_generation = tokenizer.batch_decode(
-    #                     ground_truth_generation
-    #                 )
-    #                 outputs.extend(ground_truth_generation)
-    #                 prompts.extend([sentence] * args.n_sample)
-    #             except:
-    #                 continue
-    #             results = pd.DataFrame()
-    #             results["prompt"] = [line.strip() for line in prompts]
-    #             results["output"] = outputs
-    #             results.to_csv(f"outputs/{fname}/output_temp_{temp}.csv")
-
-    # 例如，调整 temperature
     if args.tune_temp:
         for temp in np.arange(0.05, 1.05, 0.05):
             temp = np.round(temp, 2)
@@ -350,51 +208,6 @@ def main():
                 results["output"] = outputs
                 results.to_csv(f"outputs/{fname}/output_temp_{temp}.csv")
 
-    # if args.tune_topp:
-    #     for top_p in np.arange(0, 1.05, 0.05):
-    #         top_p = np.round(top_p, 2)
-    #         logging.info(f"Running topp = {top_p}")
-    #         outputs = []
-    #         prompts = []
-    #         model.eval()
-
-    #         for sentence in tqdm(lines):
-    #             try:
-    #                 # get ground truth generation
-    #                 if "falcon" in args.model or "mpt" in args.model:
-    #                     ground_truth_generation = model.generate(
-    #                         tokenizer(sentence, return_tensors="pt").input_ids.to(
-    #                             "cuda"
-    #                         ),
-    #                         max_new_tokens=100,
-    #                         top_p=top_p,
-    #                         do_sample=True,
-    #                         num_return_sequences=args.n_sample,
-    #                     )
-    #                 else:
-    #                     ground_truth_embeds = get_sentence_embedding(
-    #                         model, tokenizer, sentence
-    #                     )
-
-    #                     ground_truth_generation = model.generate(
-    #                         inputs_embeds=ground_truth_embeds,
-    #                         max_new_tokens=100,
-    #                         top_p=top_p,
-    #                         do_sample=True,
-    #                         num_return_sequences=args.n_sample,
-    #                     )
-    #                 ground_truth_generation = tokenizer.batch_decode(
-    #                     ground_truth_generation
-    #                 )
-    #                 outputs.extend(ground_truth_generation)
-    #                 prompts.extend([sentence] * args.n_sample)
-    #             except:
-    #                 continue
-    #             results = pd.DataFrame()
-    #             results["prompt"] = [line.strip() for line in prompts]
-    #             results["output"] = outputs
-    #             results.to_csv(f"outputs/{fname}/output_topp_{top_p}.csv")
-
     if args.tune_topp:
         for top_p in np.arange(0.05, 1.05, 0.05):
             top_p = np.round(top_p, 2)
@@ -429,49 +242,6 @@ def main():
                 results["output"] = outputs
                 results.to_csv(f"outputs/{fname}/output_topp_{top_p}.csv")
 
-    # if args.tune_topk:
-    #     for top_k in [1, 2, 5, 10, 20, 50, 100, 200, 500]:
-    #         logging.info(f"Running topk = {top_k}")
-    #         outputs = []
-    #         prompts = []
-    #         model.eval()
-
-    #         for sentence in tqdm(lines):
-    #             try:
-    #                 # get ground truth generation
-    #                 if "falcon" in args.model or "mpt" in args.model:
-    #                     ground_truth_generation = model.generate(
-    #                         tokenizer(sentence, return_tensors="pt").input_ids.to(
-    #                             "cuda"
-    #                         ),
-    #                         max_new_tokens=100,
-    #                         top_k=top_k,
-    #                         do_sample=True,
-    #                         num_return_sequences=args.n_sample,
-    #                     )
-    #                 else:
-    #                     ground_truth_embeds = get_sentence_embedding(
-    #                         model, tokenizer, sentence
-    #                     )
-
-    #                     ground_truth_generation = model.generate(
-    #                         inputs_embeds=ground_truth_embeds,
-    #                         max_new_tokens=100,
-    #                         top_k=top_k,
-    #                         do_sample=True,
-    #                         num_return_sequences=args.n_sample,
-    #                     )
-    #                 ground_truth_generation = tokenizer.batch_decode(
-    #                     ground_truth_generation
-    #                 )
-    #                 outputs.extend(ground_truth_generation)
-    #                 prompts.extend([sentence] * args.n_sample)
-    #             except:
-    #                 continue
-    #             results = pd.DataFrame()
-    #             results["prompt"] = [line.strip() for line in prompts]
-    #             results["output"] = outputs
-    #             results.to_csv(f"outputs/{fname}/output_topk_{top_k}.csv")
     if args.tune_topk:
         for top_k in [1, 2, 5, 10, 20, 50, 100, 200, 500]:
             logging.info(f"Running topk = {top_k}")
